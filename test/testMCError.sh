@@ -1,20 +1,18 @@
 #!/bin/bash
 
-
 ### BEGIN CONFIGURATION ###
-
-		TESTDIR=$(pwd)/ROOTPWA_MC_TEST
 
 	### BEGIN PHASE SPACE ###
 
 		# mass bin [MeV/c^2]
-		MASS=1800
-		BINWIDTH=20
+		MASS=$1  #1800
+		BINWIDTH=80
 
 		# number of phase space events to generate
-		NMB_PS_EVENTS=500
+		NMB_PS_EVENTS=50000
+		TESTDIR=/nfs/freenas/tuph/e18/project/compass/analysis/tkumschier/ROOTPWA/test/TEST_FOLDER_MASS/${MASS}/
 
-		SEED_PS=123456
+		SEED_PS=${1}123456
 
 	#-- END PHASE SPACE --#
 
@@ -116,7 +114,7 @@ cp -v "${ROOTPWA}/rootpwa.config" "./"
 cp -v "${ROOTPWA}/test/mcTest/reference_fit/bin65_c2pap_bestfits_converged_MASS_1800_1820_N45340.root.example" "./reference_fit/bin65_c2pap_bestfits_converged_MASS_1800_1820_N45340.root"
 
 # make sure the integral binning in the config file is set correctly
-sed -i.bak 's/^integralBinning.*$/integralBinning                        = [ { "mass": (1.8, 1.82) } ]/' rootpwa.config
+sed -i.bak 's/^integralBinning.*$/integralBinning                        = [ { "mass": (${MASS}/1000, (${MASS}+20)/1000) } ]/' rootpwa.config
 rm -f rootpwa.config.bak
 
 #-- END PREPARATION --#
@@ -150,72 +148,5 @@ testStep "calculation of amplitudes for phase-space data" "${ROOTPWA}/build/bin/
 
 # calculate integrals for generated phase-space data
 testStep "calculation of integrals for phase-space data" "${ROOTPWA}/build/bin/calcIntegrals -e generated"
-
-# generate weighted MC pseudo data
-testStep "generation of MC data with weights" \
-"${ROOTPWA}/build/bin/genPseudoData \
-\"./generator_noBeamSimulation.conf\" \ \"${TESTDIR}/reference_fit/bin65_c2pap_bestfits_converged_MASS_1800_1820_N45340.root\" \ \"./weighted_mc_data/weighted_pseudoData_MASS_${MASS}-$((MASS+BINWIDTH))_N_${NMB_PSEUDO_EVENTS}.root\" \
--i \"./ints/integral_binID-0_2.root\" \
--s ${SEED_PSEUDO} \
--n ${NMB_PSEUDO_EVENTS} \
--M ${MASS} \
--B ${BINWIDTH}"
-
-# deweight the pseudo data
-testStep "deweighting of MC data" \
-"${ROOTPWA}/build/bin/deWeight \ \"./weighted_mc_data/weighted_pseudoData_MASS_${MASS}-$((MASS+BINWIDTH))_N_${NMB_PSEUDO_EVENTS}.root\" \ \"./data/pseudoData_MASS_${MASS}-$((MASS+BINWIDTH))_N_${NMB_PSEUDO_EVENTS}.root\" \
--s ${SEED_DEWEIGHT}"
-
-# backup old file manager ...
-printInfo "Move first file manager (backup) ..."
-mv ./fileManager.pkl ./fileManager.pkl.old
-
-# ... create a new file manager
-testStep "creation of second file manager" "${ROOTPWA}/build/bin/createFileManager"
-
-# calculate amplitudes for 'real' (= MC) data
-testStep "calculation of amplitudes for 'real' (= weighted-MC) data" "${ROOTPWA}/build/bin/calcAmplitudes -e real"
-
-#-- END MONTE CARLO GENERATION --#
-
-### BEGIN FIT TEST ###
-
-testStep "pwaFit without prior" \
-"${ROOTPWA}/build/bin/pwaFit \
-\"./fits/pwaTest_NONLOPT_NOPRIOR.root\" \
---noAcceptance \
--w ${DESTINATION_DIR}/wavelist.compass.2008.88waves.f0980fl \
--s ${SEED_FIT}"
-
-testStep "pwaFit with prior" \
-"${ROOTPWA}/build/bin/pwaFit \
-\"./fits/pwaTest_NONLOPT_CAUCHY_PRIOR_WIDTH_0.5.root\" \
---noAcceptance \
--w ${DESTINATION_DIR}/wavelist.compass.2008.88waves.f0980fl \
--C \
--P 0.5 \
--s ${SEED_FIT}"
-
-if which pwaNloptFit
-then
-	testStep "pwaNloptFit without prior" \
-	"${ROOTPWA}/build/bin/pwaNloptFit \
-	\"./fits/pwaTest_NLOPT_NOPRIOR.root\" \
-	--noAcceptance \
-	-w ${DESTINATION_DIR}/wavelist.compass.2008.88waves.f0980fl \
-	-s ${SEED_FIT} \
-	--keepMatricesOnlyOfBest"
-
-	testStep "pwaNloptFit with prior" \
-	"${ROOTPWA}/build/bin/pwaNloptFit \
-	\"./fits/pwaTest_NLOPT_CAUCHY_PRIOR_WIDTH_0.5.root\" \
-	--noAcceptance \
-	-w ${DESTINATION_DIR}/wavelist.compass.2008.88waves.f0980fl \
-	-C \
-	-P 0.5 \
-	-s ${SEED_FIT}"
-fi
-
-#-- END FIT TEST --#
 
 exit 0

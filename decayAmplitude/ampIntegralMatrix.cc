@@ -301,8 +301,10 @@ ampIntegralMatrix::integrate(const vector<const amplitudeMetadata*>& ampMetadata
                              const long                              maxNmbEvents,
                              const string&                           weightFileName,
                              const eventMetadata*                    eventMeta,
-                             const multibinBoundariesType&           otfBin)
+                             const multibinBoundariesType&           otfBin,
+			     const bool                              calcVarianz)
 {
+        printInfo << " Meine Test Info -1- : decayAmplitude/ampIntegralMatrix.cc" << endl;
 	if (ampMetadata.empty()) {
 		printWarn << "did not receive any amplitude trees. cannot calculate integral." << endl;
 		return false;
@@ -404,6 +406,11 @@ ampIntegralMatrix::integrate(const vector<const amplitudeMetadata*>& ampMetadata
 	accumulator_set<double, stats<tag::sum(compensated)> > weightAcc;
 	typedef accumulator_set<complex<double>, stats<tag::sum(compensated)> > complexAcc;
 	vector<vector<complexAcc> > ampProdAcc(_nmbWaves, vector<complexAcc>(_nmbWaves));
+
+	//typedef accumulator_set<double, stats<tag::sum(compensated)> > varianzAcc;
+	vector<vector<complexAcc> > ampProdVarianzAccReal(_nmbWaves, vector<complexAcc>(_nmbWaves));
+	vector<vector<complexAcc> > ampProdVarianzAccImag(_nmbWaves, vector<complexAcc>(_nmbWaves));
+	
 	// process weight file and amplitudes
 	vector<vector<complex<double> > > amps(_nmbWaves);
 	progress_display progressIndicator(_nmbEvents, cout, "");
@@ -450,10 +457,11 @@ ampIntegralMatrix::integrate(const vector<const amplitudeMetadata*>& ampMetadata
 
 		// sum up integral matrix elements
 		for (unsigned int waveIndexI = 0; waveIndexI < _nmbWaves; ++waveIndexI)
-			for (unsigned int waveIndexJ = 0; waveIndexJ < _nmbWaves; ++waveIndexJ) {
-				// sum over incoherent subamps
+		  for (unsigned int waveIndexJ = 0; waveIndexJ < _nmbWaves; ++waveIndexJ) {
+		    //for (unsigned int waveIndexJ = waveIndexI; waveIndexJ < waveIndexI + 1; ++waveIndexJ) {
+		 		// sum over incoherent subamps
 				const unsigned int nmbSubAmps = amps[waveIndexI].size();
-				if (nmbSubAmps != amps[waveIndexJ].size()) {
+	   			if (nmbSubAmps != amps[waveIndexJ].size()) {
 					printErr << "number of incoherent sub-amplitudes for wave '"
 					         << _waveNames[waveIndexI] << "' = " << nmbSubAmps
 					         << " differs from that of wave '" << _waveNames[waveIndexJ] << "' = "
@@ -464,12 +472,30 @@ ampIntegralMatrix::integrate(const vector<const amplitudeMetadata*>& ampMetadata
 					throw;
 				}
 				complex<double> val = 0;
-				for (unsigned int subAmpIndex = 0; subAmpIndex < nmbSubAmps; ++subAmpIndex)
+				for (unsigned int subAmpIndex = 0; subAmpIndex < nmbSubAmps; ++subAmpIndex) {
+				  // printInfo << waveIndexI << ", " << waveIndexJ << ", " << subAmpIndex << ": " << amps[waveIndexI][subAmpIndex] << ", " << amps[waveIndexJ][subAmpIndex] << endl;
 					val += amps[waveIndexI][subAmpIndex] * conj(amps[waveIndexJ][subAmpIndex]);
+				}
 				if (useWeight)
 					val *= weight;
 				ampProdAcc[waveIndexI][waveIndexJ](val);
-			}
+				if (calcVarianz) {
+				  double varReal = 0;
+				  double varImag = 0;
+				  for (unsigned int subAmpIndex = 0; subAmpIndex < nmbSubAmps; ++subAmpIndex) {
+				    //cout << waveIndexI << waveIndexJ << subAmpIndex << endl;
+				    varReal += pow((amps[waveIndexI][subAmpIndex] * conj(amps[waveIndexJ][subAmpIndex])).real(), 2.0);
+				    varImag += pow((amps[waveIndexI][subAmpIndex] * conj(amps[waveIndexJ][subAmpIndex])).imag(), 2.0);
+				    //cout << var << endl;
+				  }
+				  if (useWeight) {
+				        varReal *= weight;
+					varImag *= weight;
+				  }
+				  ampProdVarianzAccReal[waveIndexI][waveIndexJ](varReal);
+				  ampProdVarianzAccImag[waveIndexI][waveIndexJ](varImag);
+				}
+	        	}
 	}  // event loop
 	_nmbEvents = eventCounter;
 
@@ -477,14 +503,24 @@ ampIntegralMatrix::integrate(const vector<const amplitudeMetadata*>& ampMetadata
 	// integral of importance sampling weights
 	const double weightNorm = sum(weightAcc) / (double)_nmbEvents;
 	for (unsigned int waveIndexI = 0; waveIndexI < _nmbWaves; ++waveIndexI)
-		for (unsigned int waveIndexJ = 0; waveIndexJ < _nmbWaves; ++waveIndexJ) {
-			_integrals[waveIndexI][waveIndexJ] = sum(ampProdAcc[waveIndexI][waveIndexJ]);
+	  for (unsigned int waveIndexJ = 0; waveIndexJ < _nmbWaves; ++waveIndexJ) {
+		  _integrals[waveIndexI][waveIndexJ] = sum(ampProdAcc[waveIndexI][waveIndexJ]);
 			if (useWeight)
 				_integrals[waveIndexI][waveIndexJ] *= 1 / weightNorm;
+			if (calcVarianz) {
+			  double varianzReal = (sum(ampProdVarianzAccReal[waveIndexI][waveIndexJ]).real() - 1/nmbEvents * pow(_integrals[waveIndexI][waveIndexJ].real(),2))/nmbEvents;
+			  double varianzImag = (sum(ampProdVarianzAccImag[waveIndexI][waveIndexJ]).real() - 1/nmbEvents * pow(_integrals[waveIndexI][waveIndexJ].imag(),2))/nmbEvents;
+			  printInfo << waveIndexI << ", " << waveIndexJ << ": " <<  _integrals[waveIndexI][waveIndexJ].real() << ", " <<  1/double(nmbEvents) * _integrals[waveIndexI][waveIndexJ].real() << " +- " << sqrt(varianzReal) << ", " << sqrt(varianzReal/nmbEvents) << endl;
+			  printInfo << waveIndexI << ", " << waveIndexJ << ": " <<  _integrals[waveIndexI][waveIndexJ].imag() << ", " <<  1/double(nmbEvents) * _integrals[waveIndexI][waveIndexJ].imag() << " +- " << sqrt(varianzImag) << ", " << sqrt(varianzImag/nmbEvents) << endl;
+				
+				 if (useWeight) 
+				        _varianz[waveIndexI][waveIndexJ] *= 1 / weightNorm;
+			}
 		}
 
 	printSucc << "calculated integrals of " << _nmbWaves << " amplitude(s) "
 	          << "for " << _nmbEvents << " events" << endl;
+	printInfo << " Meine Test Info -2- : decayAmplitude/ampIntegralMatrix.cc" << endl;
 	return success;
 }
 

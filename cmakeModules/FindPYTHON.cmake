@@ -203,6 +203,7 @@ find_package_handle_standard_args(PYTHON
 if(NOT PYTHON_FOUND)
 	set(PYTHONINTERP_FOUND FALSE)
 	set(PYTHONLIBS_FOUND   FALSE)
+	message(STATUS "Unable to find requested PYTHON installation:${PYTHON_ERROR_REASON}")
 endif()
 # additional reporting
 if(PYTHONLIBS_FOUND)
