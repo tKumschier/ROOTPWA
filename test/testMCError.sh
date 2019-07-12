@@ -6,7 +6,7 @@
 
 		# mass bin [MeV/c^2]
 		MASS=$1  #1800
-		BINWIDTH=80
+		BINWIDTH=1
 
 		# number of phase space events to generate
 		NMB_PS_EVENTS=50000
