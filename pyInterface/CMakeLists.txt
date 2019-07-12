@@ -58,6 +58,16 @@ set(RPWA_PYTHON_PACKAGE_FILES
 	utils/_silencer.py
 	utils/_waveDescThresUtils.py
 )
+if (USE_PyNLOPT AND USE_AUTOGRAD)
+	LIST(APPEND RPWA_PYTHON_PACKAGE_FILES
+		pyPartialWaveFit/__init__.py
+		pyPartialWaveFit/_likelihood.py
+		pyPartialWaveFit/_parameterMapping.py
+		pyPartialWaveFit/_model.py
+		pyPartialWaveFit/_fitter.py
+		pyPartialWaveFit/_startParameterGenerator.py
+	)
+endif()
 
 set(RPWA_PYTHON_PACKAGE_BYTECODES)
 set(RPWA_PYTHON_PACKAGE_DIRS)
@@ -136,6 +146,9 @@ if(USE_BAT)
 endif()
 if(USE_NLOPT)
 	LIST(APPEND RPWA_PYTHON_SCRIPTS_FILES pwaNloptFit.py)
+endif()
+if (USE_PyNLOPT AND USE_AUTOGRAD)
+	LIST(APPEND RPWA_PYTHON_SCRIPTS_FILES pwaPyFit.py)
 endif()
 
 set(RPWA_PYTHON_SCRIPTS_LINKS)
