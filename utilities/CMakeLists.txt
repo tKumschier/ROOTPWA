@@ -88,3 +88,9 @@ make_shared_library(
 	"${ROOT_LIBS}"
 	)
 add_dependencies(${THIS_LIB} environment)
+
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/thisROOTPWA.sh.in ${EXECUTABLE_OUTPUT_PATH}/thisROOTPWA.sh @ONLY)
+add_custom_target(
+	thisROOTPWA ALL DEPENDS ${EXECUTABLE_OUTPUT_PATH}/thisROOTPWA.sh
+)
