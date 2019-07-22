@@ -128,7 +128,8 @@ namespace rpwa {
 		               const long                                         maxNmbEvents       = 0,
 		               const std::string&                                 weightFileName     = "",
 		               const rpwa::eventMetadata*                         eventMeta          = 0,
-		               const rpwa::multibinBoundariesType&                multibinBoundaries = rpwa::multibinBoundariesType());
+		               const rpwa::multibinBoundariesType&                multibinBoundaries = rpwa::multibinBoundariesType(),
+			       const bool					  calcVarianz	     = false);
 
 		void renormalize(const unsigned long nmbEventsRenorm);
 

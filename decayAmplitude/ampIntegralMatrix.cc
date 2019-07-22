@@ -513,8 +513,8 @@ ampIntegralMatrix::integrate(const vector<const amplitudeMetadata*>& ampMetadata
 			  printInfo << waveIndexI << ", " << waveIndexJ << ": " <<  _integrals[waveIndexI][waveIndexJ].real() << ", " <<  1/double(nmbEvents) * _integrals[waveIndexI][waveIndexJ].real() << " +- " << sqrt(varianzReal) << ", " << sqrt(varianzReal/nmbEvents) << endl;
 			  printInfo << waveIndexI << ", " << waveIndexJ << ": " <<  _integrals[waveIndexI][waveIndexJ].imag() << ", " <<  1/double(nmbEvents) * _integrals[waveIndexI][waveIndexJ].imag() << " +- " << sqrt(varianzImag) << ", " << sqrt(varianzImag/nmbEvents) << endl;
 				
-				 if (useWeight) 
-				        _varianz[waveIndexI][waveIndexJ] *= 1 / weightNorm;
+				 //if (useWeight) 
+				 //       _varianz[waveIndexI][waveIndexJ] *= 1 / weightNorm;
 			}
 		}
 
